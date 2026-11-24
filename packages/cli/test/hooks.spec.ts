@@ -596,7 +596,7 @@ describe('what a conversation saved, at the end of a turn', () => {
       const reply = JSON.parse(run(stop, env)!)
       // The card: a small jar, what was saved, a bar. Claude Code labels the first line, so the card starts below it; both show colour.
       const card = stripAnsi(reply.systemMessage as string)
-      expect(card).toMatch(new RegExp(`^${host === 'claude' ? '\\n' : ''} ▗▄▄▖\\n▗▛[●░]{2}▜▖ TokenWise · saved [\\d,]+ tokens in this conversation\\n▐[●·]{4}▌ [▰▱]{10} tool output \\d+% shorter$`, 'u'))
+      expect(card).toMatch(new RegExp(`^${host === 'claude' ? '\\n' : ''} ▗▄▄▖\\n▗▛[●░]{2}▜▖ TokenWise · saved [\\d,]+ tokens in this conversation\\n▐[●·]{4}▌ [▰▱]{10} \\d+% off$`, 'u'))
       expect(reply.systemMessage).toContain('\x1b[')
       expect(run(stop, env)).toBeUndefined()
       expect(run({ ...stop, stop_hook_active: true }, env)).toBeUndefined()
@@ -629,7 +629,7 @@ describe('what a conversation saved, at the end of a turn', () => {
     status('r-1')
     const stop = { hook_event_name: 'Stop', session_id: 's1', stop_hook_active: false, cwd: '/w' }
     const card = stripAnsi(JSON.parse(claudeHook(stop, env)!).systemMessage as string).split('\n')
-    expect(card.slice(-2)).toEqual([expect.stringMatching(/^▐[●·]{4}▌ [▰▱]{10} tool output \d+% shorter$/u),
+    expect(card.slice(-2)).toEqual([expect.stringMatching(/^▐[●·]{4}▌ [▰▱]{10} \d+% off$/u),
       '       ✦ Just learned: output from python3 etl.py is now shorter for every agent (/tokenwise to see or undo)'])
     // Said once: not again at the end of the next turn, nor at the next start.
     expect(claudeHook(stop, env)).toBeUndefined()
@@ -664,7 +664,7 @@ describe('what a conversation saved, at the end of a turn', () => {
 
   it('speaks English whatever the locale, and says nothing for a conversation that saved nothing', () => {
     const env = { ...savedConversation('claude'), LANG: 'zh_CN.UTF-8', LC_ALL: 'zh_CN.UTF-8' }
-    expect(stripAnsi(JSON.parse(claudeHook({ hook_event_name: 'Stop', session_id: 's1' }, env)!).systemMessage)).toMatch(/TokenWise · saved [\d,]+ tokens in this conversation\n▐[●·]{4}▌ [▰▱]{10} tool output \d+% shorter$/u)
+    expect(stripAnsi(JSON.parse(claudeHook({ hook_event_name: 'Stop', session_id: 's1' }, env)!).systemMessage)).toMatch(/TokenWise · saved [\d,]+ tokens in this conversation\n▐[●·]{4}▌ [▰▱]{10} \d+% off$/u)
     expect(claudeHook({ hook_event_name: 'Stop', session_id: 'other' }, env)).toBeUndefined()
     // NO_COLOR is honoured.
     expect(JSON.parse(claudeHook({ hook_event_name: 'Stop', session_id: 's2' }, { ...savedConversation('claude', 's2'), NO_COLOR: '1' })!).systemMessage).not.toContain('\x1b[')

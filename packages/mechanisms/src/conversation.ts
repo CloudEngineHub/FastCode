@@ -16,10 +16,11 @@ import { collectSubagents } from './subagents.ts'
 
 /**
  * A conversation's savings: the tokens the model did not read (each shortened
- * output's original minus what was delivered), of every tool output TokenWise
- * saw, and how many of them rules TokenWise learned saved.
+ * output's original minus what was delivered), the originals of the outputs
+ * TokenWise shortened (the share is of these only, not of output it left
+ * alone), and how many of them rules TokenWise learned saved.
  */
-export type ConversationSavings = Pick<EconomySummary, 'savedTokens' | 'seenTokens'> & { readonly learnedTokens?: number }
+export type ConversationSavings = Pick<EconomySummary, 'savedTokens' | 'rawTokens'> & { readonly learnedTokens?: number }
 
 const MONTH_MS = 30 * 86_400_000
 
@@ -59,5 +60,5 @@ export function untoldSavings(read: (sessionId: string) => readonly JournalRecor
   const saved = summary.savedTokens
   if (!(saved > toldSavings(dirs, host, sessionId))) return undefined
   const learned = summary.byFilter.find(item => item.filter === 'learned-rule')?.savedTokens ?? 0
-  return { savedTokens: saved, seenTokens: summary.seenTokens, ...learned > 0 ? { learnedTokens: learned } : {} }
+  return { savedTokens: saved, rawTokens: summary.rawTokens, ...learned > 0 ? { learnedTokens: learned } : {} }
 }

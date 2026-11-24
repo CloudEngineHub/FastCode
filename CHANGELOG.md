@@ -6,6 +6,13 @@ First open-source release line: compact tool output on nine hosts and any shell,
 recoverable compaction on every host whose plugin interface
 allows it (in full on five, assisted on three), and self-evolving filters. (0.1.0 and 0.2.0 were never published; their contents are part of this release.)
 
+- The card's share is of the outputs TokenWise shortened only, as RTK counts
+  only the commands it handled: *saved 2,973 tokens in this conversation*,
+  *90% off*. Before, it was of all the tool output TokenWise saw, so a
+  conversation full of file reads and short outputs it left alone showed
+  "tool output 1% shorter" even when the outputs it did shorten were 80%
+  shorter. The tokens saved are unchanged. The jar's coins, the bar and the
+  DeepSeek Harness toast follow it.
 - Compound commands are filtered step by step: each step's part of the
   output goes through that step's own filter, and the command runs exactly
   as written. Where TokenWise runs the script (Codex, CodeBuddy, a wrapped

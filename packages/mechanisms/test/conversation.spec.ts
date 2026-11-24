@@ -24,23 +24,27 @@ describe('what a conversation saved, said once', () => {
     decision(journal, 's1', 3000, 300)
     recordSubagent(journal, 'h', 's1', 'child')
     decision(journal, 'child', 1000, 100)
-    expect(untoldSavings(read, [home], 'h', 's1')).toEqual({ savedTokens: 3600, seenTokens: 4000 })
+    expect(untoldSavings(read, [home], 'h', 's1')).toEqual({ savedTokens: 3600, rawTokens: 4000 })
     markSavingsTold(home, 'h', 's1', 3600)
     expect(toldSavings([home], 'h', 's1')).toBe(3600)
     expect(untoldSavings(read, [home], 'h', 's1')).toBeUndefined()
     // Per agent and per conversation.
     expect(toldSavings([home], 'other', 's1')).toBe(0)
     decision(journal, 's2', 500, 100)
-    expect(untoldSavings(read, [home], 'h', 's2')).toEqual({ savedTokens: 400, seenTokens: 500 })
+    expect(untoldSavings(read, [home], 'h', 's2')).toEqual({ savedTokens: 400, rawTokens: 500 })
     decision(journal, 's1', 200, 100)
-    expect(untoldSavings(read, [home], 'h', 's1')).toEqual({ savedTokens: 3700, seenTokens: 4200 })
+    expect(untoldSavings(read, [home], 'h', 's1')).toEqual({ savedTokens: 3700, rawTokens: 4200 })
     // A recall's answer and a compaction's catalog are not taken off.
     journal.append({ schemaVersion: 1, type: 'shadow/recall', time: new Date().toISOString(), host: 'h', sessionId: 's1', callId: 'r',
       id: 'o-000000000000', original: true, outcome: 'returned', bytes: 400 })
     journal.append({ schemaVersion: 1, type: 'shadow/checkpoint', time: new Date().toISOString(), host: 'h', sessionId: 's1', kind: 'assisted',
       references: [], userMessages: 0, segmentTokens: 900, checkpointTokens: 60, addedTokens: 60 })
+    // Output TokenWise left alone is not in the share.
+    journal.append({ schemaVersion: 1, type: 'economy/decision', time: new Date().toISOString(), host: 'h', sessionId: 's1', callId: 'p', tool: 'bash',
+      command: 'ls', exitCode: 0, delivery: 'in-process', streams: 'merged', mode: 'apply', outcome: 'passed', reason: 'no-filter-match',
+      runtimeVersion: 'v', policyHash: 'p', raw: { sha256: 'c', bytes: 4000, tokens: 1000, stored: false } } as never)
     decision(journal, 's1', 300, 100)
-    expect(untoldSavings(read, [home], 'h', 's1')).toEqual({ savedTokens: 3900, seenTokens: 4500 })
+    expect(untoldSavings(read, [home], 'h', 's1')).toEqual({ savedTokens: 3900, rawTokens: 4500 })
   })
 
   it('reads the told number from any data directory and lets month-old ones go', () => {

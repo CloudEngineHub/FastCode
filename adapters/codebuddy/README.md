@@ -70,8 +70,7 @@ which lists only the model's own calls.
 ## At the end of an answer
 
 When an answer ends and the conversation saved more than when it was last
-said, a `Stop` hook adds a small card: a jar with as many coins as the share it saved, *saved 2,973 tokens in this conversation*, and a bar for *tool output 90% shorter*. The share is of all the tool output TokenWise saw in
-the conversation, shortened or not; it is in English whatever your locale.
+said, a `Stop` hook adds a small card: a jar with as many coins as the share it saved, *saved 2,973 tokens in this conversation*, and a bar for *90% off*. The share is of the outputs TokenWise shortened only, not of the output it left alone; it is in English whatever your locale.
 
 ## Compaction (full, through a mod)
 

@@ -151,7 +151,7 @@ describe('TokenWise for OpenCode', () => {
     await idle('ses_child'); await idle('ses_1'); await idle('ses_1')
     await new Promise(resolve => setTimeout(resolve, 60))
     // The card under the toast's own "TokenWise" title: a small jar, what was saved, a bar; no colour (the toast prints escape codes as text).
-    expect(toasts.map(t => t.body.message)).toEqual([expect.stringMatching(/^ ▗▄▄▖\n▗▛[●░]{2}▜▖ saved [\d,]+ tokens in this conversation\n▐[●·]{4}▌ [▰▱]{10} tool output \d+% shorter$/u)])
+    expect(toasts.map(t => t.body.message)).toEqual([expect.stringMatching(/^ ▗▄▄▖\n▗▛[●░]{2}▜▖ saved [\d,]+ tokens in this conversation\n▐[●·]{4}▌ [▰▱]{10} \d+% off$/u)])
     // A restarted OpenCode resuming the session does not say the same number again.
     const restarted = await plugin(client)
     await restarted.event!({ event: { type: 'session.idle', properties: { sessionID: 'ses_1' } } })

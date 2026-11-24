@@ -56,7 +56,7 @@ Nothing to do: recognized output is filtered from the next tool call on. In a
 session, type `/tokenwise` to see what it saved there. When a turn ends with
 more saved, that conversation's page in the Web UI shows a toast (on screen
 then, or when you open it): *TokenWise saved 2,973 tokens in this conversation
-(tool output 90% shorter)*.
+(90% off)*.
 
 On the plugin's page in **Plugins**, **Mode** switches between:
 
@@ -192,7 +192,7 @@ TokenWise 是 DeepSeek Harness（DSH）的插件，在模型读取之前精简�
 **安装**：侧边栏 **插件** → **添加插件** → 输入 `@tokenwise/dsh` → **安装** →
 **立即启用**；或在终端执行 `dsh plugin --profile web add -w @tokenwise/dsh`。
 
-**使用**：装好即生效。每轮结束时如果这次对话又省下了 token，网页上这个对话的页面会弹出提示（正在看就立刻弹，否则等你打开它时再弹），例如 “TokenWise saved 2,973 tokens in this conversation (tool output 90% shorter)”（TokenWise 显示的文字一律是英文）；同时到达的 TokenWise 提示依次弹出，不会叠在一起。在会话里输入 `/tokenwise` 查看本会话省下的 token、压缩和找回情况，以及正在用的学到的规则。
+**使用**：装好即生效。每轮结束时如果这次对话又省下了 token，网页上这个对话的页面会弹出提示（正在看就立刻弹，否则等你打开它时再弹），例如 “TokenWise saved 2,973 tokens in this conversation (90% off)”（TokenWise 显示的文字一律是英文）；同时到达的 TokenWise 提示依次弹出，不会叠在一起。在会话里输入 `/tokenwise` 查看本会话省下的 token、压缩和找回情况，以及正在用的学到的规则。
 
 **可找回的压缩**：DSH 压缩长对话时，被压缩部分的工具结果换成引用，模型可以用 `tokenwise_recall` 原样读回；你的原话逐字保留在检查点里；DSH 把超过 8192 字符的结果截成首尾两段时，完整内容也会保存并在截断处注明编号。检查点没有变小或出错时，DSH 按原方式压缩。网页版和桌面版里每个 agent 预设各有一个压缩模块，TokenWise 在 agent 启动时自动接上。
 

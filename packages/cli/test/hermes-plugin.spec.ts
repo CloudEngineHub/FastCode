@@ -127,7 +127,7 @@ for t in threading.enumerate():
 
   it('posts what the conversation saved when a turn ends, told only once a surface showed it', () => {
     const run = (delivered: string) => {
-      const tokenwise = stub('TokenWise saved 2,973 tokens in this conversation (tool output 90% shorter)')
+      const tokenwise = stub('TokenWise saved 2,973 tokens in this conversation (90% off)')
       const result = plugin(`ARGV_PATH = ${JSON.stringify(join(tokenwise.script, '..', 'argv'))}
 posted = []
 class Handle:
@@ -144,8 +144,8 @@ print(json.dumps(posted))`, { TOKENWISE_BIN: tokenwise.script })
       return { posted: JSON.parse(result), argv: tokenwise.argv() }
     }
     // Posted before the hook returns, while the turn is open. Shown: told. Not delivered: left for a later turn.
-    expect(run('True')).toEqual({ posted: ['TokenWise saved 2,973 tokens in this conversation (tool output 90% shorter)'], argv: 'notice hermes --session s1 --told' })
-    expect(run('False')).toEqual({ posted: ['TokenWise saved 2,973 tokens in this conversation (tool output 90% shorter)'], argv: 'notice hermes --session s1 --peek' })
+    expect(run('True')).toEqual({ posted: ['TokenWise saved 2,973 tokens in this conversation (90% off)'], argv: 'notice hermes --session s1 --told' })
+    expect(run('False')).toEqual({ posted: ['TokenWise saved 2,973 tokens in this conversation (90% off)'], argv: 'notice hermes --session s1 --peek' })
   }, 30_000)
 
   it('declares its hooks in the manifest Hermes reads', () => {

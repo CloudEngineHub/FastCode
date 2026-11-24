@@ -227,7 +227,7 @@ describe('what a pi conversation saved', () => {
     try {
       await pi.handlers.get('agent_end')!({}, pi.ctx)
       await pi.handlers.get('agent_end')!({}, pi.ctx)
-      const card = (saved: number, seen: number, progress = 1) => savedCard({ savedTokens: saved, seenTokens: seen }, { color: true, lines: true, progress })!.split('\n')
+      const card = (saved: number, raw: number, progress = 1) => savedCard({ savedTokens: saved, rawTokens: raw }, { color: true, lines: true, progress })!.split('\n')
       const cards = () => pi.widgets.filter(widget => widget.key === 'tokenwise-saved')
       // It starts empty, fills, and stays; the second agent_end, with nothing more saved, adds nothing.
       expect(cards()[0]!.lines).toEqual(card(2700, 3000, 0))

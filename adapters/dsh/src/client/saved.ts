@@ -17,9 +17,9 @@ import { useToastTurn } from './turns.ts'
 export const SAVED_POLL_MS = 3000
 
 /** What TokenWise saved in a conversation, after one of its turns: the same words as in every other agent. */
-export function savedText(t: Translate, saved: { savedTokens: number; seenTokens: number }): string | undefined {
+export function savedText(t: Translate, saved: { savedTokens: number; rawTokens: number }): string | undefined {
   if (!(saved.savedTokens > 0)) return undefined
-  const share = saved.seenTokens > 0 ? 100 * saved.savedTokens / saved.seenTokens : 0
+  const share = saved.rawTokens > 0 ? 100 * saved.savedTokens / saved.rawTokens : 0
   return t(share >= 1 ? 'toastSaved' : 'toastSavedLittle', { tokens: Math.round(saved.savedTokens).toLocaleString('en-US'), percent: Math.round(share) })
 }
 

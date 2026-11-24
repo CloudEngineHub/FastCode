@@ -1,11 +1,12 @@
 /**
  * What TokenWise saved in a conversation, at the end of a turn, as a small card:
  * the jar `tokenwise saved` draws, three rows tall: a mint jar of gold coins, the
- * tokens saved, and a bar for how much shorter that made the tool output.
+ * tokens saved, and a bar for how much shorter that made the outputs TokenWise
+ * shortened (of their originals only: output it left alone is not counted).
  *
  *      ▗▄▄▖
  *     ▗▛●░▜▖ TokenWise · saved 2,402 tokens in this conversation
- *     ▐●●●●▌ ▰▰▰▰▰▰▰▰▱▱ tool output 78% shorter
+ *     ▐●●●●▌ ▰▰▰▰▰▰▰▰▱▱ 78% off
  *
  * Learned rules' part of the saving follows the bar when there is one
  * ("· 1,830 from learned rules"), and once after a learning run adopted rules,
@@ -68,18 +69,18 @@ export function savedCard(summary: ConversationSavings | undefined, style: CardS
   const learned = row ? `${paint(FILL[0]!, '✦')} ${paint(MINT, row.label, true)} ${row.text}` : undefined
   if (!(saved > 0)) return learned && `${style.breakFirst ? '\n' : ''}${style.untitled ? '' : `${paint(MINT, 'TokenWise', true)} `}${learned}`
   const p = Math.min(1, Math.max(0, style.progress ?? 1))
-  const share = summary!.seenTokens > 0 ? Math.min(100, 100 * saved / summary!.seenTokens) : 0
+  const share = summary!.rawTokens > 0 ? Math.min(100, 100 * saved / summary!.rawTokens) : 0
 
   const tokens = Math.round(saved * ease(p)).toLocaleString('en-US')
   const percent = share >= 1 ? `${Math.round(share)}%` : 'under 1%'
   const said = `saved ${paint(BRIGHT, tokens, true)} tokens in this conversation`
   const byRules = summary!.learnedTokens ?? 0
-  const shorter = `tool output ${percent} shorter`
+  const off = `${percent} off`
     + (byRules > 0 ? ` · ${paint(BRIGHT, Math.round(Math.min(byRules, saved) * ease(p)).toLocaleString('en-US'))} from learned rules` : '')
 
   const filled = Math.round(share / 100 * BAR_CELLS * ease(p))
   const bar = paint(MINT, '▰'.repeat(filled)) + paint(BAR_OFF, '▱'.repeat(BAR_CELLS - filled))
-  if (!style.lines) return `${style.breakFirst ? '\n' : ''}${title}${said} ${bar} ${shorter}${learned ? ` · ${learned}` : ''}`
+  if (!style.lines) return `${style.breakFirst ? '\n' : ''}${title}${said} ${bar} ${off}${learned ? ` · ${learned}` : ''}`
 
   // Coins fill the jar from the bottom row, one per cell: four below, two in the shoulders; anything saved is at least one.
   const coins = Math.round(Math.max(1, Math.round(share / 100 * JAR_CELLS)) * ease(p))
@@ -88,5 +89,5 @@ export function savedCard(summary: ConversationSavings | undefined, style: CardS
   const top = paint(FRAME, '▗▛') + [4, 5].map(i => cell(i, '░')).join('') + paint(FRAME, '▜▖')
   const bottom = paint(FRAME, '▐') + [0, 1, 2, 3].map(i => cell(i, '·')).join('') + paint(FRAME, '▌')
   // The news row starts under the words, past the jar's six columns.
-  return [`${style.breakFirst ? '\n' : ''}${lid}`, `${top} ${title}${said}`, `${bottom} ${bar} ${shorter}`, ...learned ? [`${' '.repeat(JAR_CELLS + 1)}${learned}`] : []].join('\n')
+  return [`${style.breakFirst ? '\n' : ''}${lid}`, `${top} ${title}${said}`, `${bottom} ${bar} ${off}`, ...learned ? [`${' '.repeat(JAR_CELLS + 1)}${learned}`] : []].join('\n')
 }

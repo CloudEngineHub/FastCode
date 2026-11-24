@@ -53,10 +53,9 @@ uses another installed agent for that.
 ## At the end of an answer
 
 When an answer ends and the conversation saved more than when it was last
-said, the plugin posts a small card: a jar with as many coins as the share it saved, *saved 2,973 tokens in this conversation*, and a bar for *tool output 90% shorter* into the conversation (at `post_llm_call`,
+said, the plugin posts a small card: a jar with as many coins as the share it saved, *saved 2,973 tokens in this conversation*, and a bar for *90% off* into the conversation (at `post_llm_call`,
 before the turn closes). The TUI (`hermes --tui`) shows it in its status
-line, the classic CLI with the answer. The share is of all the tool output
-TokenWise saw in the conversation, shortened or not; it is in English
+line, the classic CLI with the answer. The share is of the outputs TokenWise shortened only, not of the output it left alone; it is in English
 whatever your locale.
 
 ## Compaction (full, as a context engine)

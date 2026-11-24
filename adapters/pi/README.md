@@ -45,7 +45,7 @@ Nothing to do: from the next `bash`, `grep` or `find` call on, recognized output
 - The status bar shows the tokens saved in the session (*TokenWise saved 5.8k tokens*), and
   when an answer ends with more saved, a card above the editor fills in about a second (the coins drop into a
   small jar, the number counts up, the bar fills) and stays until your next prompt: *TokenWise · saved 2,973
-  tokens in this conversation*, *tool output 90% shorter*.
+  tokens in this conversation*, *90% off*.
 - `/tokenwise` opens TokenWise's panel: the session's savings and
   compactions, the learned rules and what each saved, the commands worth
   learning from, and a learning run in progress. Keys: `l` learn now, `c`

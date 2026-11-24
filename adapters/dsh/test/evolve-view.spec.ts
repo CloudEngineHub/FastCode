@@ -126,8 +126,8 @@ describe('self-evolution section', () => {
     expect(readyText(t, ready)).toBe('TokenWise can learn from your cargo test, pytest output (~7.6k tokens to save). Start it in Plugins → TokenWise.')
     expect(readyText(t, [])).toBeUndefined()
     // What a conversation saved, in the words every other agent uses.
-    expect(savedText(t, { savedTokens: 2973, seenTokens: 3300 })).toBe('TokenWise saved 2,973 tokens in this conversation (tool output 90% shorter)')
-    expect(savedText(t, { savedTokens: 40, seenTokens: 900_000 })).toBe('TokenWise saved 40 tokens in this conversation (tool output under 1% shorter)')
-    expect(savedText(t, { savedTokens: 0, seenTokens: 10 })).toBeUndefined()
+    expect(savedText(t, { savedTokens: 2973, rawTokens: 3300 })).toBe('TokenWise saved 2,973 tokens in this conversation (90% off)')
+    expect(savedText(t, { savedTokens: 40, rawTokens: 900_000 })).toBe('TokenWise saved 40 tokens in this conversation (under 1% off)')
+    expect(savedText(t, { savedTokens: 0, rawTokens: 10 })).toBeUndefined()
   })
 })

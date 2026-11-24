@@ -104,7 +104,8 @@ describe('what a DSH conversation saved', () => {
     expect(await saved('s2')).toBeNull()
     expect(await saved()).toBeNull()
     expect(await host.post(ROUTES.announcement)).toEqual({ run: null, ready: null })
-    expect(await saved('s1')).toEqual({ savedTokens: 2700, seenTokens: 4000 })
+    // The share is of the shortened output only: the 1,000 tokens left alone are not in it.
+    expect(await saved('s1')).toEqual({ savedTokens: 2700, rawTokens: 3000 })
     expect(await saved('s1')).toBeNull()
     turnEnd('s1')
     expect(await saved('s1')).toBeNull()
@@ -112,7 +113,7 @@ describe('what a DSH conversation saved', () => {
     host = mount()
     turnEnd('s1'); turnEnd('s2')
     expect(await saved('s1')).toBeNull()
-    expect(await saved('s2')).toEqual({ savedTokens: 600, seenTokens: 800 })
+    expect(await saved('s2')).toEqual({ savedTokens: 600, rawTokens: 800 })
   })
 })
 
