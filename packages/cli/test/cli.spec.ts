@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -78,18 +78,21 @@ describe('tokenwise run', () => {
     const raw = spawnSync('/bin/sh', ['-c', 'grep -rn value src'], { cwd, encoding: 'utf8' }).stdout
     expect(tokenwise(['run', '-c', 'grep -rn value src'], { cwd, env: { TOKENWISE_DISABLE: '1' } }).out).toBe(raw)
   })
-  it.each(['/bin/sh', '/bin/bash', '/bin/zsh'])('filters each step of a compound script by its own filter (%s)', shell => {
+  // Directories, not single files: GNU grep -r names the file only when it searches a directory.
+  it.each(['/bin/sh', '/bin/bash', '/bin/zsh'].filter(shell => existsSync(shell)))('filters each step of a compound script by its own filter (%s)', shell => {
     const cwd = project(), home = temp()
-    const one = tokenwise(['run', '-c', 'grep -rn value src/f0.ts'], { cwd }).out
-    const two = tokenwise(['run', '-c', 'grep -rn value src/f1.ts'], { cwd }).out
-    const script = 'grep -rn value src/f0.ts && grep -rn value src/f1.ts; false; echo "rc=$?"'
+    mkdirSync(join(cwd, 'lib'))
+    writeFileSync(join(cwd, 'lib', 'g0.ts'), readFileSync(join(cwd, 'src', 'f0.ts')))
+    const one = tokenwise(['run', '-c', 'grep -rn value src'], { cwd }).out
+    const two = tokenwise(['run', '-c', 'grep -rn value lib'], { cwd }).out
+    const script = 'grep -rn value src && grep -rn value lib; false; echo "rc=$?"'
     const result = tokenwise(['run', '--host', 'test', '--session', 's1', '-c', script], { cwd, home, env: { SHELL: shell } })
     expect(result.status).toBe(0)
     expect(result.out + result.err).not.toContain('\u001e')
     expect(result.out).toBe(`${one}${two}rc=1\n`)
     const records = readFileSync(join(home, 'journal', 'test', 's1.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line))
     expect(records).toMatchObject([{ outcome: 'projected', command: script, parts: 2 }])
-    expect(tokenwise(['run', '-c', 'grep -rn value src/f0.ts && exit 4; echo no'], { cwd, env: { SHELL: shell } }).status).toBe(4)
+    expect(tokenwise(['run', '-c', 'grep -rn value src && exit 4; echo no'], { cwd, env: { SHELL: shell } }).status).toBe(4)
   })
   it('removes marks cut across reads, and only its own', () => {
     const filter = new MarkFilter('abc123def456')
