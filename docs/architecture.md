@@ -56,6 +56,34 @@ summarized under [Hosts at a glance](#hosts-at-a-glance).
    filters that declare their tool reports on stderr: compilers, `go build`,
    BuildKit, Jest). Each filter also declares the commands it reads
    (`commands`); hosts that decide before a command runs route only those.
+   A command of several steps (`git log -5 && echo "===" && git status`,
+   `git diff | head -100`) is not read by one filter: each step's part of
+   the output goes through that step's own filter, and the rest stays as it
+   is (`projectCompound`). The command still runs exactly as written. Where
+   each part starts comes from one of two places:
+   - **Marks**, when TokenWise runs the script (`tokenwise run`: Codex,
+     CodeBuddy, a wrapped Claude Code call). Before each step the script
+     prints a mark with a random nonce and the previous step's exit status on
+     both streams. The mark function returns that status, so `$?`, `&&`,
+     `||`, `set -e` and the script's exit status are unchanged, and it passes
+     `$_` on. The marks are removed before anything is printed. Scripts that
+     read `PIPESTATUS`, set traps, trace commands (`set -x`), use `exec` or
+     list functions are not marked.
+   - **The output itself**, on hosts that hand over a finished result. Steps
+     that print nothing when they succeed (`cd`, `export`, `mkdir -p`,
+     anything sent to `/dev/null`) and the model's own literal separators
+     (`echo "=== log ==="`, found exactly once and in order) split the text.
+     A gap with exactly one step that prints is that step's part.
+   A part's filter reads it with the step's exit status: from the marks, or
+   where the script shows it (in a run of `&&`, a separator printed after a
+   step means it succeeded; the last run of `&&` succeeded when the script
+   did). With the status unknown, only a filter that answers the same for
+   success and failure applies. A pipeline is read as its first stage only
+   when the rest shows the start unchanged (`| head -n N`, `| cat`), never
+   after `| tail`, which may cut off what the filter needs. Anything less
+   certain stays whole: two steps sharing a gap, a separator that also
+   appears inside a step's output, heredocs, subshells, loops, background
+   jobs.
 3. **Admit**: the projection must be strictly smaller in UTF-8 bytes and save
    at least `minimumSavedTokens` (≥ 1).
 4. **Save, journal, deliver**: the original and the source map go to the
@@ -85,7 +113,12 @@ How the projection reaches the model differs by host:
   `PreToolUse` wraps the command in `tokenwise run` instead when Claude's own
   permissions would allow the rewritten command: bypass mode, or an allow
   rule that matches the command as written.
-- **CodeBuddy** — like Codex: `PreToolUse` wraps the command in `tokenwise run`.
+- **CodeBuddy** — like Codex: `PreToolUse` wraps the command in `tokenwise run`,
+  but, as for Claude Code, only where that changes no permission: CodeBuddy
+  checks its rules against the wrapped command. In `bypassPermissions` mode
+  every recognized command is wrapped; otherwise only one simple command the
+  user's own allow rules match and no deny or ask rule could, answered with
+  `allow`.
   Its own `Grep` and `Glob` results (the array the model reads as one line of
   JSON) are laid out through `PostToolUse`, only for the model's own calls:
   a call from code in CodeBuddy's REPL hands its value to that program, and

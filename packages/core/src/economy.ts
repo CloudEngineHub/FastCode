@@ -1,5 +1,8 @@
 /** Host-neutral Token Economy decision for one shell execution. No I/O, no host types. */
 import { literalCommand } from './command.ts'
+import { projectCompound } from './compound.ts'
+import { scriptSteps, stepPrint } from './script.ts'
+import type { StepOutput } from './script.ts'
 import { STATIC_FILTERS, filterCoversCommand, projectStaticFilter } from './filters/index.ts'
 import { ProjectionBuilder } from './projection-map.ts'
 import type { MappedProjection, SourceMap } from './projection-map.ts'
@@ -29,6 +32,8 @@ export interface ShellResult {
   readonly truncated?: boolean
   /** Timeout, signal or cancellation: the output is not a complete report. */
   readonly interrupted?: boolean
+  /** Where each step of a compound command printed in `stdout.text`, when `tokenwise run` marked them. */
+  readonly steps?: readonly StepOutput[]
 }
 
 export type EconomyPassReason =
@@ -67,6 +72,8 @@ export interface EconomyProjection extends EconomySizes {
   readonly stream: 'stdout' | 'stderr'
   /** Replacement for the whole rendered result. */
   readonly text: string
+  /** For a compound command: how many of its steps were filtered (`filter` is the one that saved the most). */
+  readonly parts?: number
   /** Maps `text` back to the rendered result, in UTF-16 code units. */
   readonly sourceMap: SourceMap
   readonly policyHash: string
@@ -184,10 +191,21 @@ export function decideShellProjection(result: ShellResult, options: EconomyDecis
   let projection: FilterCandidate | undefined
   let composed: MappedProjection | undefined
   let stream: 'stdout' | 'stderr' = 'stdout'
+  let parts: number | undefined
+  const compoundProjection = () => projectCompound({ command: result.command, text: result.stdout.text, exitCode: result.exitCode,
+    merged: result.stderr === undefined, ...result.steps === undefined ? {} : { steps: result.steps }, ...filterOptions === undefined ? {} : { options: filterOptions } })
   try {
     const stdoutInput = { command: result.command, stdout: result.stdout.text, exitCode: result.exitCode, options: filterOptions }
-    // Learned rules first (they never throw), then the built-in filters.
-    projection = policy.learned?.project(stdoutInput) ?? projectStaticFilter(stdoutInput)
+    // A command of several steps: each step's part through that step's filter, before any filter reads the whole.
+    const steps = scriptSteps(result.command)
+    const compound = steps !== undefined && steps.length > 1 ? compoundProjection() : undefined
+    if (compound !== undefined) {
+      parts = compound.parts
+      projection = { filter: compound.filter, transformation: compound.transformation, text: compound.text, sourceMap: compound.sourceMap }
+    } else {
+      // Learned rules first (they never throw), then the built-in filters.
+      projection = policy.learned?.project(stdoutInput) ?? projectStaticFilter(stdoutInput)
+    }
     if (projection !== undefined) composed = embedProjection(result.rendered, result.stdout, projection)
     // Cargo emits its build report on stderr. Only the diagnostic-preserving
     // Cargo parser or an exact duplicate-row fold may touch that stream; never
@@ -209,6 +227,14 @@ export function decideShellProjection(result: ShellResult, options: EconomyDecis
         stream = 'stderr'
       }
     }
+    // One pipeline (`git diff | head -100`) no filter read whole: its first stage's filter.
+    if (projection === undefined && steps?.length === 1) {
+      const pipeline = compoundProjection()
+      if (pipeline !== undefined) {
+        projection = { filter: pipeline.filter, transformation: pipeline.transformation, text: pipeline.text, sourceMap: pipeline.sourceMap }
+        composed = embedProjection(result.rendered, result.stdout, pipeline)
+      }
+    }
   } catch {
     return pass('filter-error')
   }
@@ -227,7 +253,8 @@ export function decideShellProjection(result: ShellResult, options: EconomyDecis
   if (sizes.projectedBytes >= sizes.rawBytes || sizes.rawTokens - sizes.projectedTokens < minimumSavedTokens) {
     return pass('non-growth-rejected', { ...identity, ...sizes })
   }
-  return { kind: 'project', ...identity, stream, text: composed.text, sourceMap: composed.sourceMap, ...sizes, policyHash: policy.policyHash }
+  return { kind: 'project', ...identity, stream, text: composed.text, sourceMap: composed.sourceMap, ...parts === undefined ? {} : { parts },
+    ...sizes, policyHash: policy.policyHash }
 }
 
 /** A host tool's own result (no shell), with the layout its adapter verified against that exact text. */
@@ -272,5 +299,11 @@ const SEARCH_AND_LISTING_HEADS = new Set(['grep', 'rg', 'ripgrep', 'find', 'ls',
 export function mayProject(command: string): boolean {
   if (hasBuiltinCommand(command) || filterCoversCommand(command)) return true
   const shell = inspectShell(command)
-  return shell !== undefined && shell.heads.some(head => SEARCH_AND_LISTING_HEADS.has(head))
+  if (shell !== undefined && shell.heads.some(head => SEARCH_AND_LISTING_HEADS.has(head))) return true
+  // A compound command: a step some filter claims.
+  const steps = scriptSteps(command)
+  return steps !== undefined && (steps.length > 1 || steps[0]!.stages.length > 1) && steps.some(step => {
+    const print = stepPrint(step, true)
+    return print.kind === 'output' && print.commands.some(text => hasBuiltinCommand(text) || filterCoversCommand(text))
+  })
 }

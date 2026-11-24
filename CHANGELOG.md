@@ -6,6 +6,16 @@ First open-source release line: compact tool output on nine hosts and any shell,
 recoverable compaction on every host whose plugin interface
 allows it (in full on five, assisted on three), and self-evolving filters. (0.1.0 and 0.2.0 were never published; their contents are part of this release.)
 
+- Compound commands are filtered step by step: each step's part of the
+  output goes through that step's own filter, and the command runs exactly
+  as written. Where TokenWise runs the script (Codex, CodeBuddy, a wrapped
+  Claude Code call), the script prints a mark before each step, which
+  TokenWise removes, so even `pytest; git diff` splits; exit statuses, `$?`
+  and `set -e` are unchanged. On the other hosts the model's own separator
+  lines (`echo "=== log ==="`) and steps that print nothing (`cd`, `export`)
+  split the output. `git diff | head -100` is read by the `git diff` filter;
+  `| tail` keeps a pipeline whole. Anything uncertain stays whole. Records
+  say how many steps were filtered (`parts`). Filter runtime `static-v17`.
 - 68 more built-in filters, 97 in all, in TokenWise's own style and under the
   same contract (every problem line, total and summary kept; every removal
   counted; unknown lines and anything colored pass through). They cover the

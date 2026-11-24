@@ -57,6 +57,8 @@ export interface EconomyRecord extends JournalBase {
   readonly rule?: string
   readonly transformation?: EconomyTransformation
   readonly stream?: 'stdout' | 'stderr'
+  /** A compound command: how many of its steps were filtered, each by its own filter (`filter` saved the most). */
+  readonly parts?: number
   readonly runtimeVersion: string
   readonly policyHash: string
   /** Content hash of the learned rules the policy tried first, when there were any. */

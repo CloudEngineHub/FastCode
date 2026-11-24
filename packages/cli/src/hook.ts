@@ -9,7 +9,7 @@ import { claudeAfterCompact, claudeAllowRecall, claudePreCompact } from './claud
 import { codexAfterCompact } from './codex-shadow.ts'
 import { grokAfterCompact, grokPendingCatalog } from './grok-shadow.ts'
 import { cliContext, onPath, shellQuote } from './context.ts'
-import { allowedByRules } from './claude-permissions.ts'
+import { allowedByRules, codebuddySettingsFiles } from './claude-permissions.ts'
 import { conversationNotice } from './conversation.ts'
 import { startupNotice } from './learn.ts'
 import { keepPending, takePending } from './shadow.ts'
@@ -308,10 +308,15 @@ function nativeReply(host: HookHost, input: HookInput, tool: string, native: Nat
 }
 
 /**
- * CodeBuddy PreToolUse: wrap like Codex, without a permission decision.
- * CodeBuddy's permission check runs on the command as the model wrote it and
- * an `allow` would skip it, deny rules included. Its PostToolUse event carries
- * no command output, so the wrapper is the only way to filter.
+ * CodeBuddy PreToolUse: wrap like Codex where that changes no permission.
+ * CodeBuddy checks its permission rules against the command it is about to
+ * run (2.185: a wrapped `dotnet build` no longer matched `Bash(dotnet build)`
+ * and asked as an unknown command), and an `allow` skips its check, deny rules
+ * included. So, as for Claude Code: in `bypassPermissions` mode every
+ * recognized command is wrapped; otherwise only one simple command the user's
+ * own rules allow and no deny or ask rule could match, answered with `allow`.
+ * Its PostToolUse event carries no command output, so other calls are not
+ * filtered.
  */
 export function codebuddyHook(input: HookInput, env: NodeJS.ProcessEnv = process.env): string | undefined {
   if (input.hook_event_name === 'Stop') return turnEnd('codebuddy', input, env)
@@ -321,9 +326,17 @@ export function codebuddyHook(input: HookInput, env: NodeJS.ProcessEnv = process
     return codebuddyTool(input, env)
   }
   if (input.hook_event_name !== 'PreToolUse' || input.tool_name !== 'Bash') return undefined
-  const command = wrapScript('codebuddy', input, env, { normalize: true, tool: 'Bash' })
+  const original = input.tool_input?.command
+  const bypass = input.permission_mode === 'bypassPermissions'
+  const project = env.CODEBUDDY_PROJECT_DIR || (typeof input.cwd === 'string' ? input.cwd : undefined)
+  const allowed = !bypass && typeof original === 'string' && input.permission_mode !== 'plan'
+    && allowedByRules(original, project, env, codebuddySettingsFiles(project, env))
+  if (!bypass && !allowed) return undefined
+  // Normalizing would change the command the user's rule allowed.
+  const command = wrapScript('codebuddy', input, env, { normalize: bypass, tool: 'Bash' })
   if (command === undefined) return undefined
-  return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', updatedInput: { ...input.tool_input, command } } })
+  return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', ...allowed ? { permissionDecision: 'allow' } : {},
+    updatedInput: { ...input.tool_input, command } } })
 }
 
 /**

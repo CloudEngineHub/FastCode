@@ -21,11 +21,15 @@ Verified against Claude Code 2.1.310 in real `claude -p` sessions:
 - Claude Code sends a failed call (non-zero exit) to `PostToolUseFailure`,
   which cannot replace output, so outside `bypassPermissions` failed calls
   reach the model unchanged.
-- Commands are never rewritten outside `bypassPermissions`: a wrapped command
-  would no longer match your permission rules (`Bash(pytest:*)` would not
-  match `tokenwise run … -c 'pytest'`, and neither would Claude Code's built-in
-  read-only commands), so it would prompt where it did not before, and a deny
-  rule would stop matching. The hook never returns a permission decision.
+- Outside `bypassPermissions`, a command is rewritten only when that changes
+  no permission: one simple command that your own allow rules already allow,
+  with no deny or ask rule that could match it. Such a call is wrapped in
+  `tokenwise run` and answered with `allow`, so it is filtered even when it
+  fails. Any other command runs as written, because a wrapped command would no
+  longer match your rules (`Bash(pytest:*)` does not match
+  `tokenwise run … -c 'pytest'`, and neither do Claude Code's built-in
+  read-only commands): it would prompt where it did not before, and a deny
+  rule would stop matching.
 - Claude Code's transcript keeps what the model read (the projection);
   `tokenwise show <sha256>` prints the original.
 - A command run in the background (`run_in_background`) is remembered when it

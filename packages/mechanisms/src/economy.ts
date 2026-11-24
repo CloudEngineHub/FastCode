@@ -154,7 +154,7 @@ export class EconomyEngine {
         return { record }
       }
       const identity = { filter: decision.filter, ...decision.rule === undefined ? {} : { rule: decision.rule },
-        transformation: decision.transformation, stream: decision.stream }
+        transformation: decision.transformation, stream: decision.stream, ...decision.parts === undefined ? {} : { parts: decision.parts } }
       if (options.maxProjectedChars !== undefined && decision.text.length > options.maxProjectedChars) {
         const record: EconomyRecord = { ...base(), outcome: 'passed', reason: 'over-host-inline-limit', filter: decision.filter,
           ...decision.rule === undefined ? {} : { rule: decision.rule },

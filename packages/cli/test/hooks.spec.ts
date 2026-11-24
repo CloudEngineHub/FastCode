@@ -171,13 +171,36 @@ describe('CodeBuddy hook', () => {
     call_id: 'call_00_x', tool_use_id: 'call_00_x', agent_type: 'cli', permission_mode: 'default', client: 'CLI', version: '2.175.0', generation_id: 'g1', ...extra,
   })
 
-  it('wraps recognizable commands without a permission decision, and normalizes them', () => {
+  it('in bypassPermissions mode wraps recognizable commands without a permission decision, and normalizes them', () => {
     const { home } = grepCase()
-    const reply = JSON.parse(codebuddyHook(event('rg value src'), withLc(home))!)
+    const reply = JSON.parse(codebuddyHook(event('rg value src', { permission_mode: 'bypassPermissions' }), withLc(home))!)
     expect(reply).toEqual({ hookSpecificOutput: { hookEventName: 'PreToolUse',
       updatedInput: { command: "tokenwise run --host codebuddy --session cb-session --call call_00_x -c 'rg -n -H value src'", description: 'Search' } } })
     expect(reply.hookSpecificOutput).not.toHaveProperty('permissionDecision')
     expect(records(home, 'codebuddy')).toMatchObject([{ type: 'economy/command-rewrite', original: 'rg value src', tool: 'Bash' }])
+  })
+
+  it('otherwise wraps only a command the user\'s own rules allow, answered with allow and not normalized', () => {
+    // CodeBuddy checks its rules against the wrapped command, so a wrap would ask where the user had allowed.
+    const user = temp(), project = temp()
+    const rules = (dir: string, permissions: Record<string, string[]>) => {
+      mkdirSync(join(dir, '.codebuddy'), { recursive: true })
+      writeFileSync(join(dir, '.codebuddy', 'settings.json'), JSON.stringify({ permissions }))
+    }
+    const env = { ...withLc(temp()), HOME: user }
+    const at = (command: string, extra: Record<string, unknown> = {}) => codebuddyHook(event(command, { cwd: project, ...extra }), env)
+    expect(at('rg value src')).toBeUndefined()
+    rules(project, { allow: ['Bash(rg value src)', 'Bash(git diff:*)'] })
+    expect(JSON.parse(at('rg value src')!)).toEqual({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow',
+      updatedInput: { command: "tokenwise run --host codebuddy --session cb-session --call call_00_x -c 'rg value src'", description: 'Search' } } })
+    expect(at('git diff && git status')).toBeUndefined()
+    expect(at('rg value src', { permission_mode: 'plan' })).toBeUndefined()
+    rules(user, { deny: ['Bash(rg:*)'] })
+    expect(at('rg value src')).toBeUndefined()
+    rmSync(join(user, '.codebuddy'), { recursive: true })
+    expect(at('rg value src')).toBeDefined()
+    // A managed settings folder may hold deny rules this hook cannot be sure to read.
+    expect(codebuddyHook(event('rg value src', { cwd: project }), { ...env, CODEBUDDY_MANAGED_SETTINGS_DIR: temp() })).toBeUndefined()
   })
 
   it('leaves other commands, background commands, other events and wrapped commands alone', () => {
@@ -190,9 +213,10 @@ describe('CodeBuddy hook', () => {
 
   it('wraps the command tokenwise doctor --probe asks for, and only that one of its own', () => {
     const env = withLc(temp())
-    expect(JSON.parse(codebuddyHook(event('tokenwise probe tw0123abcd'), env)!).hookSpecificOutput.updatedInput.command)
+    const bypass = (command: string) => event(command, { permission_mode: 'bypassPermissions' })
+    expect(JSON.parse(codebuddyHook(bypass('tokenwise probe tw0123abcd'), env)!).hookSpecificOutput.updatedInput.command)
       .toBe("tokenwise run --host codebuddy --session cb-session --call call_00_x -c 'tokenwise probe tw0123abcd'")
-    for (const command of ['tokenwise probe tw0123abcd; rm -rf x', 'tokenwise probe', 'tokenwise rules']) expect(codebuddyHook(event(command), env), command).toBeUndefined()
+    for (const command of ['tokenwise probe tw0123abcd; rm -rf x', 'tokenwise probe', 'tokenwise rules']) expect(codebuddyHook(bypass(command), env), command).toBeUndefined()
   })
 })
 

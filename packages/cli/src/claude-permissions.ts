@@ -12,7 +12,7 @@
  * Claude Code as it is. RTK handles the same problem by reimplementing each
  * agent's permission checks; this is the narrow, conservative part of that.
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
@@ -25,6 +25,20 @@ export function settingsFiles(project: string | undefined, env: NodeJS.ProcessEn
     : process.platform === 'win32' ? 'C:\\Program Files\\ClaudeCode\\managed-settings.json' : '/etc/claude-code/managed-settings.json'
   return [managed, join(user, 'settings.json'), join(user, 'settings.local.json'),
     ...project ? [join(project, '.claude', 'settings.json'), join(project, '.claude', 'settings.local.json')] : []]
+}
+
+/**
+ * CodeBuddy Code's settings files for a session in `project`, the same rules
+ * in the same format; undefined when a managed settings folder exists, whose
+ * deny rules this module cannot be sure to read.
+ */
+export function codebuddySettingsFiles(project: string | undefined, env: NodeJS.ProcessEnv = process.env): string[] | undefined {
+  const managed = [env.CODEBUDDY_MANAGED_SETTINGS_DIR?.trim(),
+    process.platform === 'darwin' ? '/Library/Application Support/CodeBuddyCode' : process.platform === 'linux' ? '/etc/codebuddy-code' : undefined]
+  if (managed.some(dir => dir && existsSync(dir))) return undefined
+  const user = join(env.HOME || homedir(), '.codebuddy')
+  return [join(user, 'settings.json'), join(user, 'settings.local.json'),
+    ...project ? [join(project, '.codebuddy', 'settings.json'), join(project, '.codebuddy', 'settings.local.json')] : []]
 }
 
 /** Rules from every readable file; undefined when a file exists but cannot be read as settings. */
@@ -86,10 +100,14 @@ export function ruleMatches(rule: string, command: string, loose = false): boole
   return regex.test(cmd)
 }
 
-/** True only when the user's rules allow `command` outright and nothing could deny it or ask about it. */
-export function allowedByRules(command: string, project: string | undefined, env: NodeJS.ProcessEnv = process.env): boolean {
-  if (!simpleCommand(command)) return false
-  const rules = loadRules(settingsFiles(project, env))
+/**
+ * True only when the user's rules allow `command` outright and nothing could deny it or ask about it.
+ * `files`: the host's settings files (Claude Code's by default).
+ */
+export function allowedByRules(command: string, project: string | undefined, env: NodeJS.ProcessEnv = process.env,
+  files: readonly string[] | undefined = settingsFiles(project, env)): boolean {
+  if (!simpleCommand(command) || files === undefined) return false
+  const rules = loadRules(files)
   if (!rules) return false
   // Deny and ask rules are checked with and without a trailing `2>&1`; a rule that might match (an unreadable pattern included) blocks the wrap.
   const forms = [command, command.replace(/\s+2>&1\s*$/u, '')]

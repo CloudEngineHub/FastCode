@@ -2,8 +2,8 @@
 
 A CodeBuddy plugin. Its `PreToolUse` hook on the `Bash` tool does the main
 work: for a command that a TokenWise filter may recognize (test runners, compilers,
-`git status/diff`, `grep`/`rg`, `find`, `ls`, build tools, …) the hook
-rewrites
+`git status/diff`, `grep`/`rg`, `find`, `ls`, build tools, …), where the
+rewrite changes no permission (see below), the hook rewrites
 
 ```
 python3 -m pytest -v
@@ -24,11 +24,18 @@ Verified against CodeBuddy Code 2.175.0 in real `codebuddy -p` sessions:
 - A failing `pytest -v` run (150 passed, 1 failed): the model read 1,245
   bytes instead of 13,328, and still named the failing test and its
   assertion. Its history keeps the original command.
-- The hook returns no permission decision: an `allow` would skip
-  CodeBuddy's permission check entirely, deny rules included. CodeBuddy
-  checks the command as the model wrote it, so your rules keep working: with
-  `--allowedTools "Bash(python3 -m pytest:*)"` the wrapped run went ahead,
-  and with `--disallowedTools "Bash(python3 -m pytest:*)"` it was blocked.
+- Since 2.185 CodeBuddy checks its permission rules against the command it
+  is about to run, the wrapped one: a wrapped `dotnet build` no longer
+  matched `Bash(dotnet build)` and asked as an unknown command. So a command
+  is wrapped only where that changes no permission: in `bypassPermissions`
+  mode, and otherwise for one simple command that an allow rule in your
+  CodeBuddy settings matches with no deny or ask rule that could match it;
+  such a call is answered with `allow` (an `allow` skips CodeBuddy's own
+  check, so the hook checks the deny and ask rules itself). Any other call
+  runs as written and is not filtered, since CodeBuddy's `PostToolUse` has no
+  output to replace. With a managed settings folder
+  (`CODEBUDDY_MANAGED_SETTINGS_DIR`, `/Library/Application Support/CodeBuddyCode`),
+  only `bypassPermissions` mode wraps.
 - For `Bash`, CodeBuddy's `PostToolUse` event carries the exit code but not
   the command's output, so results cannot be replaced after the fact;
   wrapping is the only route.

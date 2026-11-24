@@ -11,6 +11,10 @@ export { developerCommand, literalCommand, looksUp, readsFileContent, toolArgv }
 export { hasBuiltinCommand, inspectShell } from './shell-inspection.ts'
 export type { ShellInspection } from './shell-inspection.ts'
 export { rewriteCommand } from './command-rewrite.ts'
+export { instrumentScript, scriptSteps, splitMarks, stepPrint } from './script.ts'
+export type { ScriptStage, ScriptStep, StepJoin, StepOutput, StepPrint } from './script.ts'
+export { projectCompound } from './compound.ts'
+export type { CompoundInput, CompoundProjection } from './compound.ts'
 export type { CommandRewriteRule } from './command-rewrite.ts'
 export { createPolicy } from './policy.ts'
 export {

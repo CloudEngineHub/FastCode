@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { codexPreToolUse } from '../src/hook.ts'
-import { commandText } from '../src/run.ts'
+import { MarkFilter, commandText } from '../src/run.ts'
 import { shellQuote } from '../src/context.ts'
 
 const main = fileURLToPath(new URL('../src/main.ts', import.meta.url))
@@ -77,6 +77,27 @@ describe('tokenwise run', () => {
     const cwd = project()
     const raw = spawnSync('/bin/sh', ['-c', 'grep -rn value src'], { cwd, encoding: 'utf8' }).stdout
     expect(tokenwise(['run', '-c', 'grep -rn value src'], { cwd, env: { TOKENWISE_DISABLE: '1' } }).out).toBe(raw)
+  })
+  it.each(['/bin/sh', '/bin/bash', '/bin/zsh'])('filters each step of a compound script by its own filter (%s)', shell => {
+    const cwd = project(), home = temp()
+    const one = tokenwise(['run', '-c', 'grep -rn value src/f0.ts'], { cwd }).out
+    const two = tokenwise(['run', '-c', 'grep -rn value src/f1.ts'], { cwd }).out
+    const script = 'grep -rn value src/f0.ts && grep -rn value src/f1.ts; false; echo "rc=$?"'
+    const result = tokenwise(['run', '--host', 'test', '--session', 's1', '-c', script], { cwd, home, env: { SHELL: shell } })
+    expect(result.status).toBe(0)
+    expect(result.out + result.err).not.toContain('\u001e')
+    expect(result.out).toBe(`${one}${two}rc=1\n`)
+    const records = readFileSync(join(home, 'journal', 'test', 's1.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line))
+    expect(records).toMatchObject([{ outcome: 'projected', command: script, parts: 2 }])
+    expect(tokenwise(['run', '-c', 'grep -rn value src/f0.ts && exit 4; echo no'], { cwd, env: { SHELL: shell } }).status).toBe(4)
+  })
+  it('removes marks cut across reads, and only its own', () => {
+    const filter = new MarkFilter('abc123def456')
+    const mark = Buffer.from('\u001eTWabc123def456 1 0\u001e\n')
+    const parts = [Buffer.concat([Buffer.from('a\n'), mark.subarray(0, 5)]), Buffer.concat([mark.subarray(5), Buffer.from('b\u001eTWother\n')])]
+    expect(Buffer.concat([...parts.map(part => filter.push(part)), filter.end()]).toString()).toBe('a\nb\u001eTWother\n')
+    const cut = new MarkFilter('abc123def456')
+    expect(Buffer.concat([cut.push(Buffer.from('x\u001eTWabc123def456 2')), cut.end()]).toString()).toBe('x')
   })
   it('rejects ambiguous invocations', () => {
     expect(tokenwise(['run']).status).toBe(2)

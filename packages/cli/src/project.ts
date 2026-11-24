@@ -1,7 +1,7 @@
 import { EconomyEngine } from '@tokenwise/mechanisms'
 import type { EconomyRecord } from '@tokenwise/protocol'
 import { RuleStore, collectDaily } from '@tokenwise/store'
-import type { NativeResult, ShellResult } from '@tokenwise/core'
+import type { NativeResult, ShellResult, StepOutput } from '@tokenwise/core'
 import { cliContext } from './context.ts'
 
 export interface OutputRequest {
@@ -19,6 +19,8 @@ export interface OutputRequest {
   /** With `stderr`, the streams are filtered apart; without it, `stdout` is the host's merged output. */
   readonly stdout: string
   readonly stderr?: string
+  /** Where each step of a compound command printed in `stdout`, from `tokenwise run`'s marks. */
+  readonly steps?: readonly StepOutput[]
   readonly cwd?: string
   readonly env?: NodeJS.ProcessEnv
   /** A projection this long or longer passes instead (the host already delivers something as short). */
@@ -49,7 +51,8 @@ export function projectOutput(request: OutputRequest): { stdout: string; stderr?
     ...request.hostShown === undefined ? {} : { hostShown: request.hostShown } })
   const base = { command: request.command, exitCode: request.exitCode, interrupted: request.interrupted, ...request.truncated ? { truncated: true } : {} }
   const process = (result: ShellResult) => engine.process({ sessionId: request.sessionId, callId: request.callId, tool: request.tool, result }).text
-  const stdout = request.stdout === '' ? undefined : process({ ...base, rendered: request.stdout, stdout: { start: 0, text: request.stdout } })
+  const stdout = request.stdout === '' ? undefined
+    : process({ ...base, rendered: request.stdout, stdout: { start: 0, text: request.stdout }, ...request.steps === undefined ? {} : { steps: request.steps } })
   const stderr = !separate || request.stderr === '' ? undefined
     : process({ ...base, rendered: request.stderr!, stdout: { start: 0, text: '' }, stderr: { start: 0, text: request.stderr! } })
   try { collectDaily(store.dataDir, days => store.artifacts.prune(days), config.artifacts.retentionDays) } catch { /* Housekeeping only. */ }

@@ -62,7 +62,7 @@ export const HOST_PROFILES: Readonly<Record<string, HostProfile>> = Object.freez
     inlineChars: 30_000,
     capabilities: [...local, 'toolCalls', 'commandWrapper', 'compaction', 'tools', 'models', 'sessions'],
     notes: [
-      'PreToolUse wraps recognized commands in `tokenwise run` with no permission decision, so CodeBuddy\'s own permission check still runs',
+      'CodeBuddy checks its permission rules against the command it is about to run, so PreToolUse wraps recognized commands in `tokenwise run` only where that changes no permission: in bypassPermissions mode, and elsewhere for one simple command the user\'s own rules allow and no deny or ask rule could match (answered with allow); other calls run as written, unfiltered',
       'its PostToolUse event carries no command output, so results cannot be replaced after the fact',
       'its own Grep and Glob results (a JSON array) are laid out losslessly through PostToolUse; calls from its REPL are left alone',
       'background commands are not wrapped; TaskOutput holding the whole stdout of one that finished is filtered through PostToolUse (TaskOutput shows no exit code: failed reads as 1 unless the completion notice gave it)',
